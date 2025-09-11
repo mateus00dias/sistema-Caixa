@@ -1,146 +1,177 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle Diário - Caixa & OS</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div class="container py-4">
-  <div class="d-flex align-items-center mb-4">
-    <div class="logo-container">
-      <img src="logo.png" alt="Logo" class="me-3" style="height:50px;">
-    </div>
-    <h2>Controle Diário: Caixa & Saída de OS</h2>
-  </div>
+const $ = id => document.getElementById(id);
+const money = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  <div class="row g-3">
+const API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? "http://localhost:3000"
+  : "https://sistema-caixa-omega.vercel.app";
 
-    <!-- Caixa -->
-    <div class="col-lg-6">
-      <div class="card p-3 reveal">
-        <h5>Caixa - Lançamento</h5>
-        <form id="formCaixa" class="row g-2">
-          <input type="hidden" id="caixaId">
-          <div class="col-12">
-            <label>Data</label>
-            <input type="date" id="caixaData" class="form-control" required>
-          </div>
-          <div class="col-12">
-            <label>Nº OS </label>
-            <input type="text" id="caixaOS" class="form-control">
-          </div>
-          <div class="col-6">
-            <label>Crédito (R$)</label>
-            <input type="number" step="0.01" id="caixaCredito" class="form-control" value="0">
-          </div>
-          <div class="col-6">
-            <label>Débito (R$)</label>
-            <input type="number" step="0.01" id="caixaDebito" class="form-control" value="0">
-          </div>
-          <div class="col-12">
-            <label>Observação</label>
-            <input type="text" id="caixaObsDebito" class="form-control" placeholder="Ex: Ajuste de caixa, transferência, retiradas">
-          </div>
-          <div class="col-12 d-flex gap-2 mt-2">
-            <button class="btn btn-primary" type="submit">Salvar</button>
-            <button class="btn btn-outline-secondary" type="button" id="btnLimparCaixa">Limpar</button>
-          </div>
-        </form>
-      </div>
-    </div>
+let caixaEntries = [];
+let osEntries = [];
 
-    <!-- Saída OS -->
-    <div class="col-lg-6">
-      <div class="card p-3 reveal">
-        <h5>Saída de OS</h5>
-        <form id="formOS" class="row g-2">
-          <input type="hidden" id="osId">
-          <div class="col-4">
-            <label>Nº OS</label>
-            <input type="text" id="osNumero" class="form-control" required>
-          </div>
-          <div class="col-4">
-            <label>Funcionário (liberou)</label>
-            <input type="text" id="osLiberou" class="form-control">
-          </div>
-          <div class="col-4">
-            <label>Quem levou</label>
-            <input type="text" id="osLevou" class="form-control">
-          </div>
-          <div class="col-12 d-flex gap-2 mt-2">
-            <button class="btn btn-primary" type="submit">Salvar</button>
-            <button class="btn btn-outline-secondary" type="button" id="btnLimparOS">Limpar</button>
-          </div>
-        </form>
-      </div>
-    </div>
+function showAlert(message) { alert(message); }
 
-    <!-- Filtro e total -->
-    <div class="col-12">
-      <div class="card p-3 d-flex flex-wrap gap-3">
-        <div>
-          <label>Filtrar por Data</label>
-          <input type="date" id="filterDate" class="form-control">
-        </div>
-        <div class="ms-auto">
-          <h6>Total do Dia: <span id="totalAcumulado">R$ 0,00</span></h6>
-        </div>
-      </div>
-    </div>
+function formatarDataLocal(data) {
+  const dataLocal = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  const ano = dataLocal.getFullYear();
+  const mes = String(dataLocal.getMonth() + 1).padStart(2,'0');
+  const dia = String(dataLocal.getDate()).padStart(2,'0');
+  return `${ano}-${mes}-${dia}`;
+}
+const dataHoje = formatarDataLocal(new Date());
+$('caixaData').value = dataHoje;
 
-    <div class="col-12 d-flex justify-content-end mt-3">
-      <button class="btn btn-success" onclick="imprimirDia()">Imprimir Relatório do Dia</button>
-    </div>
+// --- Render ---
+async function renderCaixa(filter=null) {
+  const url = filter ? `${API_BASE}/caixa?date=${filter}` : `${API_BASE}/caixa`;
+  const res = await fetch(url);
+  const data = await res.json();
+  caixaEntries = data;
+  const tbody = $('tbodyCaixa'); tbody.innerHTML = '';
+  let totalDia = 0;
+  data.forEach(e => {
+    const tr = document.createElement('tr');
+    const valor = parseFloat(e.credit)-parseFloat(e.debit);
+    totalDia += valor;
+    tr.innerHTML = `
+      <td>${e.date_br}</td>
+      <td>${e.hora||'--:--'}</td>
+      <td>${e.os}</td>
+      <td>${money(e.credit)}</td>
+      <td>${money(e.debit)}</td>
+      <td class="fw-semibold">${money(valor)}</td>
+      <td>${e.obs_debito||''}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="editCaixa(${e.id})">Editar</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteCaixa(${e.id})">Excluir</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  $('totalAcumulado').textContent = 'R$ ' + money(totalDia);
+}
 
-    <!-- Tabelas -->
-    <div class="col-lg-6">
-      <div class="card p-3">
-        <h5>Caixa</h5>
-        <div class="table-wrap">
-          <table class="table table-sm table-hover">
-            <thead class="table-light sticky-top">
-              <tr>
-                <th>Data</th>
-                <th>Hora</th>
-                <th>OS</th>
-                <th>Crédito</th>
-                <th>Débito</th>
-                <th>Total</th>
-                <th>Obs Débito</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyCaixa"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+async function renderOS(filter=null) {
+  const url = filter ? `${API_BASE}/os?date=${filter}` : `${API_BASE}/os`;
+  const res = await fetch(url);
+  const data = await res.json();
+  osEntries = data;
+  const tbody = $('tbodyOS'); tbody.innerHTML = '';
+  data.forEach(e => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${e.numero_os}</td>
+      <td>${e.liberou||''}</td>
+      <td>${e.levou||''}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="editOS(${e.id})">Editar</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteOS(${e.id})">Excluir</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
 
-    <div class="col-lg-6">
-      <div class="card p-3">
-        <h5>Saída de OS</h5>
-        <div class="table-wrap">
-          <table class="table table-sm table-hover">
-            <thead class="table-light sticky-top">
-              <tr>
-                <th>OS</th>
-                <th>Funcionário</th>
-                <th>Quem levou</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyOS"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+// --- CRUD Caixa ---
+async function addOrUpdateCaixa() {
+  const id = $('caixaId').value;
+  const date = $('caixaData').value;
+  const os = $('caixaOS').value;
+  const credit = Number($('caixaCredito').value||0);
+  const debit = Number($('caixaDebito').value||0);
+  const obsDebito = $('caixaObsDebito').value||'';
+  const horaAtual = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? `${API_BASE}/caixa/${id}` : `${API_BASE}/caixa`;
+  await fetch(url,{method, headers:{"Content-Type":"application/json"}, body:JSON.stringify({date,hora:horaAtual,os,credit,debit,obs_debito:obsDebito})});
+  $('formCaixa').reset(); $('caixaData').value = dataHoje;
+  renderCaixa($('filterDate').value || null);
+}
 
-  </div>
-</div>
+async function editCaixa(id){
+  const e = caixaEntries.find(x=>x.id==id);
+  if(!e) return;
+  $('caixaId').value=e.id;
+  $('caixaData').value=e.date.slice(0,10);
+  $('caixaOS').value=e.os;
+  $('caixaCredito').value=e.credit;
+  $('caixaDebito').value=e.debit;
+  $('caixaObsDebito').value=e.obs_debito||'';
+}
 
-<script src="app.js"></script>
-</body>
-</html>
+async function deleteCaixa(id){
+  if(!confirm("Deseja realmente excluir este registro?")) return;
+  await fetch(`${API_BASE}/caixa/${id}`,{method:'DELETE'});
+  renderCaixa($('filterDate').value || null);
+}
+
+// --- CRUD OS ---
+async function addOrUpdateOS() {
+  const id = $('osId').value;
+  const numero_os = $('osNumero').value;
+  const liberou = $('osLiberou').value;
+  const levou = $('osLevou').value;
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? `${API_BASE}/os/${id}` : `${API_BASE}/os`;
+  await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify({numero_os,liberou,levou})});
+  $('formOS').reset(); renderOS($('filterDate').value || null);
+}
+
+async function editOS(id){
+  const e = osEntries.find(x=>x.id==id);
+  if(!e) return;
+  $('osId').value=e.id;
+  $('osNumero').value=e.numero_os;
+  $('osLiberou').value=e.liberou||'';
+  $('osLevou').value=e.levou||'';
+}
+
+async function deleteOS(id){
+  if(!confirm("Deseja realmente excluir esta OS?")) return;
+  await fetch(`${API_BASE}/os/${id}`,{method:'DELETE'});
+  renderOS($('filterDate').value || null);
+}
+
+// --- Imprimir ---
+function imprimirDia(){
+  const dataFiltro = $('filterDate').value || dataHoje;
+  const caixasDia = caixaEntries.filter(e=>e.date===dataFiltro);
+  const osDia = osEntries.filter(e=>e.date===dataFiltro);
+  let html = `<h3>Relatório do Dia: ${dataFiltro}</h3>`;
+  html += `<h4>Caixa</h4><table border="1" cellspacing="0" cellpadding="5">
+    <tr><th>Data</th><th>Hora</th><th>OS</th><th>Crédito</th><th>Débito</th><th>Total</th><th>Obs Débito</th></tr>`;
+  let total = 0;
+  caixasDia.forEach(c=>{
+    const val = parseFloat(c.credit)-parseFloat(c.debit);
+    total+=val;
+    html += `<tr>
+      <td>${c.date_br}</td>
+      <td>${c.hora}</td>
+      <td>${c.os}</td>
+      <td>${money(c.credit)}</td>
+      <td>${money(c.debit)}</td>
+      <td>${money(val)}</td>
+      <td>${c.obs_debito||''}</td>
+    </tr>`;
+  });
+  html += `<tr><td colspan="5">Total do Dia</td><td>${money(total)}</td><td></td></tr></table>`;
+  
+  html += `<h4>Saída de OS</h4><table border="1" cellspacing="0" cellpadding="5">
+    <tr><th>OS</th><th>Funcionário</th><th>Quem levou</th></tr>`;
+  osDia.forEach(o=>{
+    html += `<tr><td>${o.numero_os}</td><td>${o.liberou||''}</td><td>${o.levou||''}</td></tr>`;
+  });
+  html += `</table>`;
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  win.print();
+}
+
+// --- Eventos ---
+$('formCaixa').addEventListener('submit', e=>{e.preventDefault(); addOrUpdateCaixa();});
+$('formOS').addEventListener('submit', e=>{e.preventDefault(); addOrUpdateOS();});
+$('btnLimparCaixa').addEventListener('click', ()=>{$('formCaixa').reset(); $('caixaData').value=dataHoje;});
+$('btnLimparOS').addEventListener('click', ()=>$('formOS').reset());
+$('filterDate').addEventListener('change', ()=>{renderCaixa($('filterDate').value); renderOS($('filterDate').value);});
+
+// --- Inicial ---
+renderCaixa();
+renderOS();
