@@ -5,7 +5,7 @@ const money = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,
 // Detecta se está rodando local ou produção
 const API_BASE = typeof window !== 'undefined' && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   ? "http://localhost:3000"
-  : "https://sistema-caixa-omega.vercel.app/";
+  : "https://sistema-caixa-omega.vercel.app";
 
 // Alternativa para ambiente Node.js
 if (typeof window === 'undefined') {

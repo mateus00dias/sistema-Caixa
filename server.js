@@ -6,10 +6,21 @@ require("dotenv").config();
 const app = express();
 // Configuração CORS para permitir acesso do GitHub Pages
 app.use(cors({
-  origin: ['https://mateus00dias.github.io', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+  origin: ['https://mateus00dias.github.io', 'http://localhost:3000', 'https://mateus00dias.github.io/sistema-Caixa'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
+
+// Middleware para adicionar cabeçalhos CORS em todas as respostas
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 app.use(express.json());
 
 // Conexão com banco
@@ -17,6 +28,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20, // Máximo de conexões no pool
   idleTimeoutMillis: 30000, // Tempo máximo que uma conexão pode ficar inativa
+  ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: false } : false
   connectionTimeoutMillis: 2000 // Tempo máximo para estabelecer uma conexão
 });
 
