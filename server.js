@@ -208,9 +208,12 @@ app.get("/caixa", async (req, res) => {
       const updated_at_date = r.updated_at ? new Date(r.updated_at) : null;
       
       // Exibindo apenas o horário de criação no formato HH:MM:SS sem ajuste de fuso horário
-      // O banco de dados já armazena no fuso horário local, então não precisamos ajustar
-      const created_at_formatted = created_at_date ? created_at_date.toLocaleTimeString("pt-BR", { timeZone: 'America/Sao_Paulo' }) : null;
-      const updated_at_formatted = updated_at_date ? updated_at_date.toLocaleTimeString("pt-BR", { timeZone: 'America/Sao_Paulo' }) : null;
+      // Ajustando o fuso horário para UTC+0 para corrigir o problema de exibição no GitHub Pages
+      const created_at_formatted = created_at_date ? created_at_date.toLocaleTimeString("pt-BR", { timeZone: 'UTC' }) : null;
+      const updated_at_formatted = updated_at_date ? updated_at_date.toLocaleTimeString("pt-BR", { timeZone: 'UTC' }) : null;
+      
+      console.log('Horário original caixa:', r.created_at);
+      console.log('Horário formatado caixa:', created_at_formatted);
       
       return {
         ...r,
@@ -259,8 +262,8 @@ app.post("/caixa", async (req, res) => {
       id: result.rows[0].id,
       created_at: created_at.toISOString(),
       updated_at: updated_at.toISOString(),
-      created_at_formatted: created_at.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'}),
-      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'})
+      created_at_formatted: created_at.toLocaleTimeString("pt-BR", {timeZone: 'UTC'}),
+      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'UTC'})
     });
   } catch (err) {
     // Erro ao inserir registro no banco de dados
@@ -293,7 +296,7 @@ app.put("/caixa/:id", async (req, res) => {
     res.json({ 
       ok: true,
       updated_at: updated_at.toISOString(),
-      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'})
+      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'UTC'})
     });
   } catch (err) {
     // Erro ao atualizar registro no banco de dados
@@ -332,8 +335,12 @@ app.get("/os", async (req, res) => {
       // Não é necessário ajustar o fuso horário manualmente
       
       // Exibindo apenas o horário de criação no formato HH:MM:SS
-      const created_at_formatted = created_at_date ? created_at_date.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'}) : null;
-      const updated_at_formatted = updated_at_date ? updated_at_date.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'}) : null;
+      // Ajustando o fuso horário para UTC+0 para corrigir o problema de exibição no GitHub Pages
+      const created_at_formatted = created_at_date ? created_at_date.toLocaleTimeString("pt-BR", {timeZone: 'UTC'}) : null;
+      const updated_at_formatted = updated_at_date ? updated_at_date.toLocaleTimeString("pt-BR", {timeZone: 'UTC'}) : null;
+      
+      console.log('Horário original:', r.created_at);
+      console.log('Horário formatado:', created_at_formatted);
       
       return {
         ...r,
@@ -368,8 +375,8 @@ app.post("/os", async (req, res) => {
       id: result.rows[0].id,
       created_at: created_at.toISOString(),
       updated_at: updated_at.toISOString(),
-      created_at_formatted: created_at.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'}),
-      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'})
+      created_at_formatted: created_at.toLocaleTimeString("pt-BR", {timeZone: 'UTC'}),
+      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'UTC'})
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -394,7 +401,7 @@ app.put("/os/:id", async (req, res) => {
     res.json({ 
       ok: true,
       updated_at: updated_at.toISOString(),
-      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'America/Sao_Paulo'})
+      updated_at_formatted: updated_at.toLocaleTimeString("pt-BR", {timeZone: 'UTC'})
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
