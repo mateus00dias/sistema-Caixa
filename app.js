@@ -3,11 +3,11 @@ const $ = id => document.getElementById(id);
 const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatarDataHora = v => new Date(v).toLocaleString('pt-BR');
 
-// Junta a data do input com a hora atual do sistema
+// Junta data escolhida + hora atual
 function juntarDataHora(dataInput) {
-  const hoje = new Date();
+  const agora = new Date();
   const [ano, mes, dia] = dataInput.split("-");
-  return new Date(ano, mes - 1, dia, hoje.getHours(), hoje.getMinutes(), hoje.getSeconds());
+  return new Date(ano, mes - 1, dia, agora.getHours(), agora.getMinutes(), agora.getSeconds());
 }
 
 // ===== Banco em memória =====
@@ -172,7 +172,7 @@ function imprimirDia() {
   html += `<h4>Movimentação de Caixa</h4>
   <table border="1" cellspacing="0" cellpadding="5">
     <tr>
-      <th>Data</th><th>OS</th><th>Crédito</th><th>Débito</th><th>Total</th><th>Obs</th>
+      <th>Data/Hora</th><th>OS</th><th>Crédito</th><th>Débito</th><th>Total</th><th>Obs</th>
     </tr>`;
   caixaDia.forEach(e => {
     html += `<tr>
@@ -189,7 +189,7 @@ function imprimirDia() {
   html += `<h4>Saídas de OS</h4>
   <table border="1" cellspacing="0" cellpadding="5">
     <tr>
-      <th>OS</th><th>Funcionário</th><th>Quem Levou</th><th>Data</th>
+      <th>OS</th><th>Funcionário</th><th>Quem Levou</th><th>Data/Hora</th>
     </tr>`;
   osDia.forEach(e => {
     html += `<tr>
