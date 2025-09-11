@@ -34,23 +34,53 @@ async function checkApiConnection() {
 let caixaEntries = [];
 let osEntries = [];
 
+// Configuração do fuso horário para America/Sao_Paulo
+const TIMEZONE = 'America/Sao_Paulo';
+
+// Função para normalizar datas recebidas da API
+function normalizarData(dataString) {
+  if (!dataString) return new Date();
+  
+  console.log('Normalizando data:', dataString);
+  
+  // Se for uma string no formato YYYY-MM-DD, adicionar horário meio-dia
+  if (typeof dataString === 'string' && dataString.length === 10) {
+    // Criar data com horário meio-dia para evitar problemas de fuso
+    const [ano, mes, dia] = dataString.split('-').map(Number);
+    // Criar data explicitamente com o ano, mês e dia (mês é 0-indexed em JS)
+    const dataObj = new Date(Date.UTC(ano, mes - 1, dia, 12, 0, 0));
+    console.log('Data normalizada a partir de YYYY-MM-DD:', dataObj);
+    return dataObj;
+  }
+  
+  // Se for um objeto Date ou outro formato de string
+  const dataObj = new Date(dataString);
+  // Ajustar para meio-dia UTC
+  dataObj.setUTCHours(12, 0, 0, 0);
+  console.log('Data normalizada:', dataObj);
+  
+  return dataObj;
+}
+
 // Corrigindo o problema da data com um dia a menos
 // Função para formatar a data no formato YYYY-MM-DD considerando o fuso horário local
 function formatarDataLocal(data) {
   console.log('Data de entrada formatarDataLocal:', data);
   
-  // Criando uma nova data com o ano, mês e dia para evitar problemas de fuso horário
-  const dataLocal = new Date(data.getFullYear(), data.getMonth(), data.getDate());
-  console.log('Data local após ajuste:', dataLocal);
+  // Normalizar a data primeiro
+  const dataObj = normalizarData(data);
   
-  const ano = dataLocal.getFullYear();
-  const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
-  const dia = String(dataLocal.getDate()).padStart(2, '0');
+  // Extrair ano, mês e dia no fuso UTC
+  const ano = dataObj.getUTCFullYear();
+  const mes = String(dataObj.getUTCMonth() + 1).padStart(2, '0');
+  const dia = String(dataObj.getUTCDate()).padStart(2, '0');
   
-  const resultado = `${ano}-${mes}-${dia}`;
-  console.log('Data formatada (YYYY-MM-DD):', resultado);
+  // Formar a string YYYY-MM-DD
+  const dataISO = `${ano}-${mes}-${dia}`;
   
-  return resultado;
+  console.log('Data formatada (YYYY-MM-DD):', dataISO);
+  
+  return dataISO;
 }
 
 const dataHoje = formatarDataLocal(new Date());
@@ -66,6 +96,13 @@ if (typeof document !== 'undefined') {
 // --- Funções ---
 async function renderCaixa(filter=null) {
   try {
+    // Se tiver filtro, normalizar a data para garantir consistência
+    if (filter) {
+      const dataObj = normalizarData(filter);
+      filter = formatarDataLocal(dataObj);
+      console.log('Filtro de data normalizado:', filter);
+    }
+    
     const url = filter ? `${API_BASE}/caixa?date=${filter}` : `${API_BASE}/caixa`;
     const res = await fetch(url);
     if (!res.ok) {
@@ -103,6 +140,13 @@ async function renderCaixa(filter=null) {
 
 async function renderOS(filter=null) {
   try {
+    // Se tiver filtro, normalizar a data para garantir consistência
+    if (filter) {
+      const dataObj = normalizarData(filter);
+      filter = formatarDataLocal(dataObj);
+      console.log('Filtro de data normalizado para OS:', filter);
+    }
+    
     const url = filter ? `${API_BASE}/os?date=${filter}` : `${API_BASE}/os`;
     const res = await fetch(url);
     if (!res.ok) {
@@ -133,11 +177,20 @@ async function renderOS(filter=null) {
 async function addOrUpdateCaixa() {
   try {
     const id = $('caixaId').value;
-    const date = $('caixaData').value;
+    const dateInput = $('caixaData').value;
     const os = $('caixaOS').value;
     const credit = Number($('caixaCredito').value||0);
     const debit = Number($('caixaDebito').value||0);
     const obsDebito = $('caixaObsDebito').value||'';
+    
+    console.log('Data original do input:', dateInput);
+    
+    // Normalizar e formatar a data para garantir consistência
+    const dataObj = normalizarData(dateInput);
+    const date = formatarDataLocal(dataObj);
+    
+    console.log('Data normalizada:', dataObj);
+    console.log('Data formatada para salvar:', date);
 
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}/caixa/${id}` : `${API_BASE}/caixa`;
@@ -188,11 +241,16 @@ async function deleteCaixa(id) {
 async function addOrUpdateOS() {
   try {
     const id = $('osId').value;
-    let date = $('osData').value || dataHoje;
+    const dateInput = $('osData').value || dataHoje;
     
-    // Garantir que a data esteja no formato correto (YYYY-MM-DD)
-    date = date.slice(0, 10);
-    console.log('Data da OS a ser salva:', date);
+    console.log('Data original do input OS:', dateInput);
+    
+    // Normalizar e formatar a data para garantir consistência entre ambientes
+    const dataObj = normalizarData(dateInput);
+    const date = formatarDataLocal(dataObj);
+    
+    console.log('Data normalizada OS:', dataObj);
+    console.log('Data formatada para salvar OS:', date);
     
     const numero_os = $('osNumero').value;
     const liberou = $('osLiberou').value;
@@ -310,17 +368,21 @@ if (typeof document !== 'undefined') {
 // --- Impressão do dia ---
 // Função para imprimir o relatório do dia atual ou filtrado
 function imprimirDia() {
+  console.log('Iniciando função imprimirDia');
   // Perguntar ao usuário se deseja usar a data do filtro ou selecionar outra data
   let dataFiltro = $('filterDate').value || dataHoje;
-  console.log('Data do filtro original:', dataFiltro);
+  console.log('Data do filtro original em imprimirDia:', dataFiltro);
   
   // Normalizar a data para garantir o formato correto
-  dataFiltro = dataFiltro.slice(0, 10); // Garantir formato YYYY-MM-DD
-  console.log('Data do filtro normalizada:', dataFiltro);
+  const dataFiltroObj = normalizarData(dataFiltro);
+  dataFiltro = formatarDataLocal(dataFiltroObj); // Garantir formato YYYY-MM-DD
+  console.log('Data do filtro normalizada em imprimirDia:', dataFiltro);
   
   // Garantir que a data exibida seja a mesma que foi selecionada
   const dataFormatada = formatDataBR(dataFiltro);
-  console.log('Data formatada para exibição:', dataFormatada);
+  console.log('Data formatada para exibição em imprimirDia:', dataFormatada);
+  console.log('Ambiente:', typeof window !== 'undefined' ? 'Browser' : 'Node.js');
+  console.log('Fuso horário configurado:', TIMEZONE);
   
   const usarDataFiltro = confirm('Deseja gerar o relatório para a data atualmente filtrada (' + dataFormatada + ')? Clique em OK para confirmar ou CANCELAR para selecionar outra data.');
   
@@ -374,15 +436,16 @@ function imprimirDia() {
 
 // Função auxiliar para gerar o relatório com a data selecionada
 function gerarRelatorio(dataFiltro) {
-  console.log('Gerando relatório para a data:', dataFiltro);
+  console.log('Gerando relatório para a data original:', dataFiltro);
+  
+  // Normalizar a data do filtro para garantir o formato correto (YYYY-MM-DD)
+  const dataObj = normalizarData(dataFiltro);
+  const dataFiltroNormalizada = formatarDataLocal(dataObj);
+  console.log('Data do filtro normalizada para relatório:', dataFiltroNormalizada);
   
   // Verificar o formato das datas para depuração
   console.log('Exemplo de data em caixaEntries:', caixaEntries.length > 0 ? caixaEntries[0].date : 'Nenhum registro');
   console.log('Exemplo de data em osEntries:', osEntries.length > 0 ? osEntries[0].date : 'Nenhum registro');
-  
-  // Normalizar a data do filtro para garantir o formato correto (YYYY-MM-DD)
-  const dataFiltroNormalizada = dataFiltro.slice(0, 10);
-  console.log('Data do filtro normalizada:', dataFiltroNormalizada);
   
   // Filtrar os registros pela data selecionada
   const caixaDia = caixaEntries.filter(e => {
@@ -637,41 +700,60 @@ function formatDataBR(dataISO) {
   // Verificar o formato da data de entrada para depuração
   console.log('Data de entrada formatDataBR:', dataISO);
   
-  // Garantir que a data seja tratada corretamente, ajustando para o fuso horário local
-  let d;
+  // Normalizar a data usando a função de normalização
+  const dataObj = normalizarData(dataISO);
+  console.log('Data normalizada em formatDataBR:', dataObj);
   
-  if (typeof dataISO === 'string' && dataISO.length === 10) {
-    // Se for uma string no formato YYYY-MM-DD (sem hora), usar a data sem ajuste de fuso
-    const [ano, mes, dia] = dataISO.split('-').map(Number);
-    d = new Date(ano, mes - 1, dia); // Mês em JavaScript é 0-indexed
-    console.log('Data criada a partir de string YYYY-MM-DD:', d);
-  } else {
-    // Caso contrário, usar o construtor padrão
-    d = new Date(dataISO);
-    console.log('Data criada com construtor padrão:', d);
-  }
-  
-  // Verificar a data após conversão
-  console.log('Data após conversão:', d);
-  
-  // Usar o método toLocaleDateString para formatar no padrão brasileiro (DD/MM/YYYY)
-  const dataFormatada = d.toLocaleDateString('pt-BR');
-  console.log('Data formatada:', dataFormatada);
+  // Usar o método toLocaleDateString com o fuso horário explícito para formatar no padrão brasileiro (DD/MM/YYYY)
+  const options = { timeZone: TIMEZONE, day: '2-digit', month: '2-digit', year: 'numeric' };
+  const dataFormatada = dataObj.toLocaleDateString('pt-BR', options);
+  console.log('Data formatada em formatDataBR:', dataFormatada);
   
   return dataFormatada;
 }
 
 // --- Inicial ---
-checkApiConnection();
-try {
-  // Inicializar campos de data com a data atual
-  if (typeof document !== 'undefined') {
+// Verificar se estamos em ambiente de navegador antes de inicializar
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('Inicializando aplicação...');
+    
+    // Definir a data atual nos campos de data
+    const hoje = new Date();
+    console.log('Data atual (objeto Date):', hoje);
+    
+    // Normalizar e formatar a data atual
+    const hojeNormalizado = normalizarData(hoje);
+    console.log('Data atual normalizada:', hojeNormalizado);
+    
+    // Inicializar campos de data com a data atual
     const osData = $('osData');
-    if (osData) osData.value = dataHoje;
-  }
-  
-  renderCaixa();
-  renderOS();
-} catch (error) {
-  // Erro ao carregar dados iniciais
+    if (osData) {
+      osData.value = dataHoje;
+      console.log('Campo osData definido com data:', dataHoje);
+    }
+    
+    // Verificar conexão com a API
+    checkApiConnection();
+    
+    try {
+      // Carregar dados iniciais
+      renderCaixa();
+      renderOS();
+      console.log('Dados iniciais carregados com sucesso!');
+      
+      // Inicializar o calendário se estiver disponível
+      if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
+        initCalendar();
+        console.log('Calendário inicializado!');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados iniciais:', error);
+    }
+    
+    console.log('Aplicação inicializada com sucesso!');
+  });
+} else {
+  // Em ambiente não-navegador (como SSR)
+  checkApiConnection();
 }
