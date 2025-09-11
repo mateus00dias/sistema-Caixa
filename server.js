@@ -28,7 +28,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20, // Máximo de conexões no pool
   idleTimeoutMillis: 30000, // Tempo máximo que uma conexão pode ficar inativa
-  ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: false } : false
+  ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: 2000 // Tempo máximo para estabelecer uma conexão
 });
 
