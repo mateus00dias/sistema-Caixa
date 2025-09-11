@@ -464,7 +464,9 @@ function gerarRelatorio(dataFiltro) {
   
   console.log(`Encontrados ${caixaDia.length} registros de caixa e ${osDia.length} registros de OS para a data ${dataFiltroNormalizada}`);
   const dataAtual = new Date();
-  const horaAtual = dataAtual.toLocaleTimeString('pt-BR', {timeZone: 'America/Sao_Paulo'});
+  // Garantir que a hora atual use o fuso horário correto
+  const horaAtual = dataAtual.toLocaleTimeString('pt-BR', {timeZone: TIMEZONE});
+  console.log('Hora atual formatada para o relatório:', horaAtual);
   
   // Estilos CSS para o relatório
   const estilos = `
@@ -590,8 +592,14 @@ function gerarRelatorio(dataFiltro) {
   // Cabeçalho
   html += "  <div class=\"cabecalho\">\n";
   html += "    <div class=\"logo-container\">\n";
-  // Usando caminho absoluto completo para garantir que a imagem seja carregada corretamente
-  const caminhoAbsoluto = window.location.origin + "/logo.png";
+  // Verificar se estamos no GitHub Pages e ajustar o caminho da logo
+  let caminhoLogo = "/logo.png";
+  if (window.location.hostname.includes("github.io")) {
+    // No GitHub Pages, precisamos incluir o nome do repositório no caminho
+    caminhoLogo = "/sistema-Caixa/logo.png";
+  }
+  const caminhoAbsoluto = window.location.origin + caminhoLogo;
+  console.log('Caminho da logo:', caminhoAbsoluto);
   html += "      <img src=\"" + caminhoAbsoluto + "\" alt=\"Logo da Empresa\" class=\"logo\">\n";
   html += "      <div class=\"info-empresa\">\n";
   html += "        <h1>Sistema de Caixa</h1>\n";
