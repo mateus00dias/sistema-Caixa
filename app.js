@@ -1,22 +1,16 @@
 // ===== Utilitários =====
 const $ = id => document.getElementById(id);
 const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatarDataHora = v => new Date(v).toLocaleString('pt-BR');
 
-// Formata data/hora para exibição
-function formatarDataHora(valor) {
-  if (!valor) return "";
-  const d = new Date(valor);
-  return d.toLocaleString('pt-BR'); // ex: 11/09/2025 10:35:00
+// Junta a data do input com a hora atual do sistema
+function juntarDataHora(dataInput) {
+  const hoje = new Date();
+  const [ano, mes, dia] = dataInput.split("-");
+  return new Date(ano, mes - 1, dia, hoje.getHours(), hoje.getMinutes(), hoje.getSeconds());
 }
 
-// Preenche campo datetime-local no padrão do input
-function formatarParaInput(valor) {
-  if (!valor) return "";
-  const d = new Date(valor);
-  return d.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
-}
-
-// ===== Banco em memória (pode trocar por backend depois) =====
+// ===== Banco em memória =====
 let caixaEntries = [];
 let osEntries = [];
 
@@ -25,7 +19,9 @@ $("formCaixa").addEventListener("submit", e => {
   e.preventDefault();
 
   const id = $("caixaId").value;
-  const date = $("caixaData").value;
+  const dataInput = $("caixaData").value || new Date().toISOString().slice(0,10);
+  const date = juntarDataHora(dataInput);
+
   const os = $("caixaOS").value;
   const credito = parseFloat($("caixaCredito").value) || 0;
   const debito = parseFloat($("caixaDebito").value) || 0;
@@ -71,7 +67,7 @@ function renderCaixa() {
 function editCaixa(id) {
   const e = caixaEntries.find(x => x.id == id);
   $("caixaId").value = e.id;
-  $("caixaData").value = formatarParaInput(e.date);
+  $("caixaData").value = new Date(e.date).toISOString().slice(0,10); // só a data
   $("caixaOS").value = e.os;
   $("caixaCredito").value = e.credito;
   $("caixaDebito").value = e.debito;
@@ -93,10 +89,12 @@ $("formOS").addEventListener("submit", e => {
   e.preventDefault();
 
   const id = $("osId").value;
+  const dataInput = $("osData").value || new Date().toISOString().slice(0,10);
+  const date = juntarDataHora(dataInput);
+
   const numero = $("osNumero").value;
   const liberou = $("osLiberou").value;
   const levou = $("osLevou").value;
-  const date = $("osData").value;
 
   if (id) {
     const idx = osEntries.findIndex(x => x.id == id);
@@ -135,7 +133,7 @@ function editOS(id) {
   $("osNumero").value = e.numero;
   $("osLiberou").value = e.liberou;
   $("osLevou").value = e.levou;
-  $("osData").value = formatarParaInput(e.date);
+  $("osData").value = new Date(e.date).toISOString().slice(0,10); // só a data
 }
 
 function deleteOS(id) {
