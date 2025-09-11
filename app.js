@@ -39,25 +39,18 @@ let osEntries = [];
 function formatarDataLocal(data) {
   console.log('Data de entrada formatarDataLocal:', data);
   
-  // Usar o método toISOString e extrair apenas a parte da data (YYYY-MM-DD)
-  // Isso garante que a data seja tratada corretamente independente do fuso horário
-  let dataISO;
+  // Criando uma nova data com o ano, mês e dia para evitar problemas de fuso horário
+  const dataLocal = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  console.log('Data local após ajuste:', dataLocal);
   
-  if (data instanceof Date) {
-    // Criar uma data às 12:00 para evitar problemas de fuso horário
-    const dataAjustada = new Date(data);
-    dataAjustada.setHours(12, 0, 0, 0);
-    dataISO = dataAjustada.toISOString().split('T')[0];
-  } else {
-    // Se não for uma instância de Date, tentar converter
-    const dataObj = new Date(data);
-    dataObj.setHours(12, 0, 0, 0);
-    dataISO = dataObj.toISOString().split('T')[0];
-  }
+  const ano = dataLocal.getFullYear();
+  const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
+  const dia = String(dataLocal.getDate()).padStart(2, '0');
   
-  console.log('Data formatada (YYYY-MM-DD):', dataISO);
+  const resultado = `${ano}-${mes}-${dia}`;
+  console.log('Data formatada (YYYY-MM-DD):', resultado);
   
-  return dataISO;
+  return resultado;
 }
 
 const dataHoje = formatarDataLocal(new Date());
@@ -140,21 +133,7 @@ async function renderOS(filter=null) {
 async function addOrUpdateCaixa() {
   try {
     const id = $('caixaId').value;
-    let dateInput = $('caixaData').value || dataHoje;
-    
-    // Garantir que a data esteja no formato correto (YYYY-MM-DD)
-    // Usar a função formatarDataLocal para garantir consistência
-    let date;
-    if (typeof dateInput === 'string' && dateInput.length === 10) {
-      // Se já estiver no formato YYYY-MM-DD, usar diretamente
-      date = dateInput;
-    } else {
-      // Caso contrário, converter para o formato correto
-      date = formatarDataLocal(new Date(dateInput));
-    }
-    
-    console.log('Data do Caixa a ser salva:', date);
-    
+    const date = $('caixaData').value;
     const os = $('caixaOS').value;
     const credit = Number($('caixaCredito').value||0);
     const debit = Number($('caixaDebito').value||0);
@@ -209,19 +188,10 @@ async function deleteCaixa(id) {
 async function addOrUpdateOS() {
   try {
     const id = $('osId').value;
-    let dateInput = $('osData').value || dataHoje;
+    let date = $('osData').value || dataHoje;
     
     // Garantir que a data esteja no formato correto (YYYY-MM-DD)
-    // Usar a função formatarDataLocal para garantir consistência
-    let date;
-    if (typeof dateInput === 'string' && dateInput.length === 10) {
-      // Se já estiver no formato YYYY-MM-DD, usar diretamente
-      date = dateInput;
-    } else {
-      // Caso contrário, converter para o formato correto
-      date = formatarDataLocal(new Date(dateInput));
-    }
-    
+    date = date.slice(0, 10);
     console.log('Data da OS a ser salva:', date);
     
     const numero_os = $('osNumero').value;
@@ -388,7 +358,6 @@ function imprimirDia() {
     // Aguardar a seleção da data antes de continuar
     novaDataPromise.then((novaData) => {
       if (novaData) {
-        // Garantir que a data selecionada seja usada corretamente
         dataFiltro = novaData;
         console.log('Nova data selecionada:', dataFiltro);
         console.log('Data formatada para relatório:', formatDataBR(dataFiltro));
@@ -412,9 +381,7 @@ function gerarRelatorio(dataFiltro) {
   console.log('Exemplo de data em osEntries:', osEntries.length > 0 ? osEntries[0].date : 'Nenhum registro');
   
   // Normalizar a data do filtro para garantir o formato correto (YYYY-MM-DD)
-  // Usar a função formatarDataLocal para garantir consistência
-  const dataFiltroNormalizada = typeof dataFiltro === 'string' && dataFiltro.length === 10 ? 
-    dataFiltro : formatarDataLocal(new Date(dataFiltro));
+  const dataFiltroNormalizada = dataFiltro.slice(0, 10);
   console.log('Data do filtro normalizada:', dataFiltroNormalizada);
   
   // Filtrar os registros pela data selecionada
@@ -674,9 +641,9 @@ function formatDataBR(dataISO) {
   let d;
   
   if (typeof dataISO === 'string' && dataISO.length === 10) {
-    // Se for uma string no formato YYYY-MM-DD (sem hora), criar a data corretamente
-    // Importante: usar o construtor com string ISO completa para evitar problemas de fuso horário
-    d = new Date(dataISO + 'T12:00:00'); // Adicionar meio-dia para evitar problemas de fuso
+    // Se for uma string no formato YYYY-MM-DD (sem hora), usar a data sem ajuste de fuso
+    const [ano, mes, dia] = dataISO.split('-').map(Number);
+    d = new Date(ano, mes - 1, dia); // Mês em JavaScript é 0-indexed
     console.log('Data criada a partir de string YYYY-MM-DD:', d);
   } else {
     // Caso contrário, usar o construtor padrão
