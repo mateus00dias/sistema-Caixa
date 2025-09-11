@@ -421,7 +421,7 @@ function imprimirDia() {
   html += "  <div class=\"cabecalho\">\n";
   html += "    <div class=\"logo-container\">\n";
   // Usando caminho absoluto completo para garantir que a imagem seja carregada corretamente
-  const caminhoAbsoluto = window.location.origin + "/logo.png";
+  const caminhoAbsoluto = "/logo.png"; 
   html += "      <img src=\"" + caminhoAbsoluto + "\" alt=\"Logo da Empresa\" class=\"logo\">\n";
   html += "      <div class=\"info-empresa\">\n";
   html += "        <h1>Sistema de Caixa</h1>\n";
