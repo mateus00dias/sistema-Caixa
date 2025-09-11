@@ -1,0 +1,16 @@
+CREATE TABLE caixa (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  date DATE NOT NULL,
+  os VARCHAR(255),
+  credit DECIMAL(10,2) DEFAULT 0,
+  debit DECIMAL(10,2) DEFAULT 0,
+  obs_debito VARCHAR(255)
+);
+
+CREATE TABLE os (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  date DATE NOT NULL,
+  numero_os VARCHAR(255),
+  liberou VARCHAR(255),
+  levou VARCHAR(255)
+);

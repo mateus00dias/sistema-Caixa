@@ -1,0 +1,10 @@
+body { background:#f0f2f5; font-family:Arial, sans-serif; }
+.card { box-shadow: 0 6px 18px rgba(30,41,59,.06); border-radius:10px; }
+.monetary { text-align:right; }
+.table-wrap { max-height:420px; overflow:auto; }
+.reveal { transition:all .3s ease; }
+.reveal:hover { transform:translateY(-3px); }
+.logo { max-width:200px; }
+small-muted { color:#6c757d; font-size:0.8rem; }
+
+
