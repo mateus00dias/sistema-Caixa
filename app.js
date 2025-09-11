@@ -7,10 +7,6 @@ const API_BASE = typeof window !== 'undefined' && (window.location.hostname === 
   ? "http://localhost:3000"
   : "https://sistema-caixa-omega.vercel.app";
 
-// Alternativa para ambiente Node.js
-if (typeof window === 'undefined') {
-  console.log("Executando em ambiente Node.js, usando URL local por padrão");
-}
 
 // Função auxiliar para exibir alertas em diferentes ambientes
 function showAlert(message) {
@@ -41,12 +37,20 @@ let osEntries = [];
 // Corrigindo o problema da data com um dia a menos
 // Função para formatar a data no formato YYYY-MM-DD considerando o fuso horário local
 function formatarDataLocal(data) {
+  console.log('Data de entrada formatarDataLocal:', data);
+  
   // Criando uma nova data com o ano, mês e dia para evitar problemas de fuso horário
   const dataLocal = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  console.log('Data local após ajuste:', dataLocal);
+  
   const ano = dataLocal.getFullYear();
   const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
   const dia = String(dataLocal.getDate()).padStart(2, '0');
-  return `${ano}-${mes}-${dia}`;
+  
+  const resultado = `${ano}-${mes}-${dia}`;
+  console.log('Data formatada (YYYY-MM-DD):', resultado);
+  
+  return resultado;
 }
 
 const dataHoje = formatarDataLocal(new Date());
@@ -110,6 +114,7 @@ async function renderOS(filter=null) {
     data.forEach(e => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td>${formatDataBR(e.date)}</td>
       <td>${e.numero_os}</td>
       <td>${e.liberou||''}</td>
       <td>${e.levou||''}</td>
@@ -183,10 +188,21 @@ async function deleteCaixa(id) {
 async function addOrUpdateOS() {
   try {
     const id = $('osId').value;
-    const date = dataHoje;
+    let date = $('osData').value || dataHoje;
+    
+    // Garantir que a data esteja no formato correto (YYYY-MM-DD)
+    date = date.slice(0, 10);
+    console.log('Data da OS a ser salva:', date);
+    
     const numero_os = $('osNumero').value;
     const liberou = $('osLiberou').value;
     const levou = $('osLevou').value;
+
+    // Validação básica
+    if (!numero_os) {
+      showAlert('Preencha o número da OS');
+      return;
+    }
 
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}/os/${id}` : `${API_BASE}/os`;
@@ -212,6 +228,7 @@ async function editOS(id) {
   const e = osEntries.find(x=>x.id==id);
   if(!e) return;
   $('osId').value = e.id;
+  $('osData').value = e.date.slice(0,10); // Formato YYYY-MM-DD
   $('osNumero').value = e.numero_os;
   $('osLiberou').value = e.liberou;
   $('osLevou').value = e.levou;
@@ -274,6 +291,9 @@ if (typeof document !== 'undefined') {
     btnLimparOS.addEventListener('click', ()=>{
       const formOS = $('formOS');
       if (formOS) formOS.reset();
+      
+      const osData = $('osData');
+      if (osData) osData.value = dataHoje;
     });
   }
 
@@ -290,11 +310,98 @@ if (typeof document !== 'undefined') {
 // --- Impressão do dia ---
 // Função para imprimir o relatório do dia atual ou filtrado
 function imprimirDia() {
-  const dataFiltro = $('filterDate').value || dataHoje;
-  const caixaDia = caixaEntries.filter(e => e.date.slice(0,10) === dataFiltro);
-  const osDia = osEntries.filter(e => e.date.slice(0,10) === dataFiltro);
+  // Perguntar ao usuário se deseja usar a data do filtro ou selecionar outra data
+  let dataFiltro = $('filterDate').value || dataHoje;
+  console.log('Data do filtro original:', dataFiltro);
+  
+  // Normalizar a data para garantir o formato correto
+  dataFiltro = dataFiltro.slice(0, 10); // Garantir formato YYYY-MM-DD
+  console.log('Data do filtro normalizada:', dataFiltro);
+  
+  // Garantir que a data exibida seja a mesma que foi selecionada
+  const dataFormatada = formatDataBR(dataFiltro);
+  console.log('Data formatada para exibição:', dataFormatada);
+  
+  const usarDataFiltro = confirm('Deseja gerar o relatório para a data atualmente filtrada (' + dataFormatada + ')? Clique em OK para confirmar ou CANCELAR para selecionar outra data.');
+  
+  if (!usarDataFiltro) {
+    // Criar um elemento de input de data temporário
+    const tempInput = document.createElement('input');
+    tempInput.type = 'date';
+    tempInput.value = dataFiltro;
+    tempInput.style.position = 'fixed';
+    tempInput.style.left = '-100px';
+    document.body.appendChild(tempInput);
+    
+    // Simular um clique para abrir o seletor de data
+    tempInput.focus();
+    tempInput.click();
+    
+    // Aguardar a seleção da data
+    const novaDataPromise = new Promise((resolve) => {
+      tempInput.addEventListener('change', () => {
+        const novaData = tempInput.value;
+        document.body.removeChild(tempInput);
+        resolve(novaData);
+      });
+      
+      // Se o usuário clicar fora, usar a data atual
+      document.addEventListener('click', function clickHandler(e) {
+        if (e.target !== tempInput) {
+          document.removeEventListener('click', clickHandler);
+          document.body.removeChild(tempInput);
+          resolve(dataFiltro); // Manter a data original
+        }
+      });
+    });
+    
+    // Aguardar a seleção da data antes de continuar
+    novaDataPromise.then((novaData) => {
+      if (novaData) {
+        dataFiltro = novaData;
+        console.log('Nova data selecionada:', dataFiltro);
+        console.log('Data formatada para relatório:', formatDataBR(dataFiltro));
+        gerarRelatorio(dataFiltro);
+      }
+    });
+    
+    return; // Retornar aqui para evitar a execução imediata
+  }
+  
+  // Se o usuário escolheu usar a data do filtro, gerar o relatório imediatamente
+  gerarRelatorio(dataFiltro);
+}
+
+// Função auxiliar para gerar o relatório com a data selecionada
+function gerarRelatorio(dataFiltro) {
+  console.log('Gerando relatório para a data:', dataFiltro);
+  
+  // Verificar o formato das datas para depuração
+  console.log('Exemplo de data em caixaEntries:', caixaEntries.length > 0 ? caixaEntries[0].date : 'Nenhum registro');
+  console.log('Exemplo de data em osEntries:', osEntries.length > 0 ? osEntries[0].date : 'Nenhum registro');
+  
+  // Normalizar a data do filtro para garantir o formato correto (YYYY-MM-DD)
+  const dataFiltroNormalizada = dataFiltro.slice(0, 10);
+  console.log('Data do filtro normalizada:', dataFiltroNormalizada);
+  
+  // Filtrar os registros pela data selecionada
+  const caixaDia = caixaEntries.filter(e => {
+    // Garantir que estamos comparando apenas a parte da data (YYYY-MM-DD)
+    const dataRegistro = e.date ? e.date.slice(0, 10) : '';
+    console.log(`Comparando: ${dataRegistro} === ${dataFiltroNormalizada}`);
+    return dataRegistro === dataFiltroNormalizada;
+  });
+  
+  const osDia = osEntries.filter(e => {
+    // Garantir que estamos comparando apenas a parte da data (YYYY-MM-DD)
+    const dataRegistro = e.date ? e.date.slice(0, 10) : '';
+    console.log(`Comparando OS: ${dataRegistro} === ${dataFiltroNormalizada}`);
+    return dataRegistro === dataFiltroNormalizada;
+  });
+  
+  console.log(`Encontrados ${caixaDia.length} registros de caixa e ${osDia.length} registros de OS para a data ${dataFiltroNormalizada}`);
   const dataAtual = new Date();
-  const horaAtual = dataAtual.toLocaleTimeString('pt-BR');
+  const horaAtual = dataAtual.toLocaleTimeString('pt-BR', {timeZone: 'America/Sao_Paulo'});
   
   // Estilos CSS para o relatório
   const estilos = `
@@ -443,6 +550,7 @@ function imprimirDia() {
   html += "    <thead>\n";
   html += "      <tr>\n";
   html += "        <th>OS</th>\n";
+  html += "        <th>Horário</th>\n";
   html += "        <th>Crédito</th>\n";
   html += "        <th>Débito</th>\n";
   html += "        <th>Total</th>\n";
@@ -460,6 +568,7 @@ function imprimirDia() {
     
     html += "      <tr>\n";
     html += "        <td>" + (e.os || '-') + "</td>\n";
+    html += "        <td>" + (e.created_at_formatted || '-') + "</td>\n";
     html += "        <td>R$ " + money(e.credit) + "</td>\n";
     html += "        <td>R$ " + money(e.debit) + "</td>\n";
     html += "        <td class=\"" + valorClass + "\">R$ " + money(valor) + "</td>\n";
@@ -470,7 +579,7 @@ function imprimirDia() {
   // Total do dia
   const totalClass = totalDia >= 0 ? 'valor-positivo' : 'valor-negativo';
   html += "      <tr class=\"total-row\">\n";
-  html += "        <td colspan=\"3\">Total do dia:</td>\n";
+  html += "        <td colspan=\"4\">Total do dia:</td>\n";
   html += "        <td class=\"" + totalClass + "\">R$ " + money(totalDia) + "</td>\n";
   html += "        <td></td>\n";
   html += "      </tr>\n";
@@ -483,6 +592,7 @@ function imprimirDia() {
   html += "    <thead>\n";
   html += "      <tr>\n";
   html += "        <th>Número OS</th>\n";
+  html += "        <th>Horário</th>\n";
   html += "        <th>Liberado por</th>\n";
   html += "        <th>Retirado por</th>\n";
   html += "      </tr>\n";
@@ -494,12 +604,13 @@ function imprimirDia() {
     osDia.forEach(e => {
       html += "      <tr>\n";
       html += "        <td>" + (e.numero_os || '-') + "</td>\n";
+      html += "        <td>" + (e.created_at_formatted || '-') + "</td>\n";
       html += "        <td>" + (e.liberou || '-') + "</td>\n";
       html += "        <td>" + (e.levou || '-') + "</td>\n";
       html += "      </tr>\n";
     });
   } else {
-    html += "      <tr><td colspan=\"3\" style=\"text-align: center;\">Nenhuma OS registrada nesta data</td></tr>\n";
+    html += "      <tr><td colspan=\"4\" style=\"text-align: center;\">Nenhuma OS registrada nesta data</td></tr>\n";
   }
   
   html += "    </tbody>\n";
@@ -523,13 +634,42 @@ function imprimirDia() {
 // --- Função auxiliar ---
 // Função auxiliar para formatar data no padrão brasileiro
 function formatDataBR(dataISO) {
-  const d = new Date(dataISO);
-  return d.toLocaleDateString('pt-BR');
+  // Verificar o formato da data de entrada para depuração
+  console.log('Data de entrada formatDataBR:', dataISO);
+  
+  // Garantir que a data seja tratada corretamente, ajustando para o fuso horário local
+  let d;
+  
+  if (typeof dataISO === 'string' && dataISO.length === 10) {
+    // Se for uma string no formato YYYY-MM-DD (sem hora), usar a data sem ajuste de fuso
+    const [ano, mes, dia] = dataISO.split('-').map(Number);
+    d = new Date(ano, mes - 1, dia); // Mês em JavaScript é 0-indexed
+    console.log('Data criada a partir de string YYYY-MM-DD:', d);
+  } else {
+    // Caso contrário, usar o construtor padrão
+    d = new Date(dataISO);
+    console.log('Data criada com construtor padrão:', d);
+  }
+  
+  // Verificar a data após conversão
+  console.log('Data após conversão:', d);
+  
+  // Usar o método toLocaleDateString para formatar no padrão brasileiro (DD/MM/YYYY)
+  const dataFormatada = d.toLocaleDateString('pt-BR');
+  console.log('Data formatada:', dataFormatada);
+  
+  return dataFormatada;
 }
 
 // --- Inicial ---
 checkApiConnection();
 try {
+  // Inicializar campos de data com a data atual
+  if (typeof document !== 'undefined') {
+    const osData = $('osData');
+    if (osData) osData.value = dataHoje;
+  }
+  
   renderCaixa();
   renderOS();
 } catch (error) {

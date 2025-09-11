@@ -58,6 +58,10 @@
         <h5>Saída de OS</h5>
         <form id="formOS" class="row g-2">
           <input type="hidden" id="osId">
+          <div class="col-12">
+            <label>Data</label>
+            <input type="date" id="osData" class="form-control" required>
+          </div>
           <div class="col-4">
             <label>Nº OS</label>
             <input type="text" id="osNumero" class="form-control" required>
@@ -126,6 +130,7 @@
           <table class="table table-sm table-hover">
             <thead class="table-light sticky-top">
               <tr>
+                <th>Data</th>
                 <th>OS</th>
                 <th>Funcionário</th>
                 <th>Quem levou</th>
