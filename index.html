@@ -1,4 +1,3 @@
-<script>
 const $ = id => document.getElementById(id);
 const money = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -176,58 +175,3 @@ $('filterDate').addEventListener('change', ()=>{renderCaixa($('filterDate').valu
 // --- Inicial ---
 renderCaixa();
 renderOS();
-
-
-// --- Calculadora ---
-let calcExpression = "";
-
-function calcPress(value) {
-  calcExpression += value;
-  document.getElementById("calcDisplay").value = calcExpression;
-}
-
-function calcClear() {
-  calcExpression = "";
-  document.getElementById("calcDisplay").value = "";
-}
-
-function calcEquals() {
-  try {
-    let result = eval(calcExpression);
-    document.getElementById("calcDisplay").value = result;
-    calcExpression = result.toString();
-  } catch (e) {
-    alert("Erro na expressão!");
-  }
-}
-</script>
-
-<!-- AQUI FICA A CALCULADORA, ABAIXO DA SAÍDA DE OS -->
-<div class="card p-3 mt-3">
-  <h5>Calculadora</h5>
-  <input type="text" id="calcDisplay" class="form-control mb-2" readonly>
-  <div class="grid grid-cols-4 gap-2">
-    <button class="btn btn-outline-dark" onclick="calcPress('7')">7</button>
-    <button class="btn btn-outline-dark" onclick="calcPress('8')">8</button>
-    <button class="btn btn-outline-dark" onclick="calcPress('9')">9</button>
-    <button class="btn btn-outline-danger" onclick="calcClear()">C</button>
-    
-    <button class="btn btn-outline-dark" onclick="calcPress('4')">4</button>
-    <button class="btn btn-outline-dark" onclick="calcPress('5')">5</button>
-    <button class="btn btn-outline-dark" onclick="calcPress('6')">6</button>
-    <button class="btn btn-outline-primary" onclick="calcPress('+')">+</button>
-    
-    <button class="btn btn-outline-dark" onclick="calcPress('1')">1</button>
-    <button class="btn btn-outline-dark" onclick="calcPress('2')">2</button>
-    <button class="btn btn-outline-dark" onclick="calcPress('3')">3</button>
-    <button class="btn btn-outline-primary" onclick="calcPress('-')">-</button>
-    
-    <button class="btn btn-outline-dark" onclick="calcPress('0')">0</button>
-    <button class="btn btn-outline-dark" onclick="calcPress('.')">.</button>
-    <button class="btn btn-outline-success" onclick="calcEquals()">=</button>
-    <button class="btn btn-outline-primary" onclick="calcPress('*')">×</button>
-  </div>
-  <div class="mt-2">
-    <button class="btn btn-outline-primary w-100" onclick="calcPress('/')">÷</button>
-  </div>
-</div>
